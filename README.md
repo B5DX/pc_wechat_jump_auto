@@ -1,54 +1,20 @@
-## 前言
-最近微信小游戏跳一跳大热，自己也是中毒颇久，无奈手残最高分只拿到200分。无意间看到[教你用Python来玩微信跳一跳](https://zhuanlan.zhihu.com/p/32452473)一文，在电脑上利用adb驱动工具操作手机，详细的介绍以及如何安装adb驱动可以去看这篇文章，这里就不再介绍了。但是原文每次跳跃需要手动点击，于是想尝试利用图像处理的方法自动化。  
-最重要的不是最终刷的分数，而是解决这个问题的过程。花了一个下午尝试各种方法，最终采用opencv的模板匹配+边缘检测，方法很简单但效果很好。  
-本文主要分享如何用Opencv对游戏截图进行检测，自动找到小人和跳跃目标点的位置，计算跳跃距离，从而让电脑帮你玩跳一跳游戏！
-本文的代码见https://github.com/moneyDboat/wechat_jump_jump，欢迎fork和star～
+# PC端微信跳一跳小程序破解
+自动玩Windows PC端微信跳一跳。使用opencv-python检测跳棋位置和跳板中心位置。
 
-## 主要使用的Python库及对应版本：
-python 3.6  
-opencv-python 3.3.0  
-numpy 1.13.3  
+## 可能需要调整的参数：
+1. window_left_top和window_right_bottom的值，保证截图区域准确。
+2. temp_player.jpg和temp_end.jpg最好自己重新截图以匹配分辨率。
+3. jump函数中的参数2.735以及moveTo鼠标移动位置。
+4. 当距离过近时容易跳远，程序末尾进行了距离缩放。该参数可能需要调整。
 
-## Opencv  
-首先介绍下opencv，是一个计算机视觉库，本文将用到opencv里的模板匹配和边缘检测功能。  
-
-### 模板匹配
-模板匹配是在一幅图像中寻找一个特定目标的方法之一。这种方法的原理非常简单，遍历图像中的每一个可能的位置，比较各处与模板是否“相似”，当相似度足够高时，就认为找到了我们的目标。  
-例如提供小人的模板图片
-![这里写图片描述](http://img.blog.csdn.net/20171231132928712?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvbW9uZXlkYm9hdA==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
-```
-import cv2
-import numpy as np
-
-# imread()函数读取目标图片和模板
-img_rgb = cv2.imread("0.png", 0)
-template = cv2.imread('temp1.jpg', 0) 
-
-# matchTemplate 函数：在模板和输入图像之间寻找匹配,获得匹配结果图像 
-# minMaxLoc 函数：在给定的矩阵中寻找最大和最小值，并给出它们的位置
-res = cv2.matchTemplate(img_rgb,template,cv2.TM_CCOEFF_NORMED)
-min_val,max_val,min_loc,max_loc = cv2.minMaxLoc(res)
-```
-使用OpenCV的matchTemplate函数，就能找到中小人的位置。小人的检测效果非常好，每次都能识别得很精确。
-![这里写图片描述](http://img.blog.csdn.net/20171231133114181?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvbW9uZXlkYm9hdA==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
-观察到小人跳到物块中心之后，下一个物块中心就会出现白色小圆点，同样可以匹配图中白色小圆点，从而获得跳跃目标点的坐标，计算跳跃的距离。
-![这里写图片描述](http://img.blog.csdn.net/20171231133244302?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvbW9uZXlkYm9hdA==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
-但是只匹配小圆点获得跳跃目标位置会出现问题，因为有些物块本身就是白色的，导致检测失败，所以我们在检测失败（模板匹配的相似度很低）的情况下采用边缘检测。
-
-### 边缘检测
-边缘检测顾名思义就是检测图片中的边缘，使用opencv中的cv2.Canny函数。
-跳一跳的画面很简洁，所以边缘检测的效果很好。检测出边缘后，从上至下扫描图片就能找到下一个物块的大致位置。
-```
-img = cv2.imread('1.png', 0)
-
-# 先做高斯模糊能够提高边缘检测的效果
-img = cv2.GaussianBlur(img,(5,5),0)  
-canny = cv2.Canny(img, 1, 10) 
-```
-![这里写图片描述](http://img.blog.csdn.net/20171231133343730?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvbW9uZXlkYm9hdA==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
-# 总结
-以上就是用OpenCV让电脑帮你玩跳一跳的整体思路，还有很多细节之后再补充，具体的流程见https://github.com/moneyDboat/wechat_jump_jump中的play.py文件，我已经尽力将代码注释写得详尽。  
-电脑上安装好adb驱动和相关的Python库，手机通过数据线连接电脑，运行play.py，接下来你就可以刷刷剧吃吃零食，然后让电脑帮你刷分啦～  
-这是我自己的结果截图，自动刷到1000分以上是没有问题的。  
-![这里写图片描述](http://img.blog.csdn.net/20171231133441199?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvbW9uZXlkYm9hdA==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
-还有很多不完善的地方，例如屏幕分辨率适配等，如果有什么更好的想法和建议，欢迎评论共同探讨～～
+## 算法原理
+### 识别跳棋
+识别跳棋时直接使用cv2.matchTemplate与temp_player.jpg进行模板匹配即可。
+### 识别目标跳板中心点
+直接识别白点的准确率不高，因此修改了原库的实现，全部使用边缘检测确定目标跳板中心点。  
+1. 先进行Canny边缘检测。
+2. 然后擦除边缘图中跳棋及其邻域的像素。
+3. 裁剪截图避免边界和左上角分数数字的影响。
+4. 逐行扫描，当出现非0像素点时即找到目标跳板的顶部中心点坐标(x_top, y_top)。
+5. 根据跳板在跳棋左侧还是右侧识别跳板的边缘，得到顶部中心点和边缘点在x轴（横轴）方向的差值x_delta，用来预估跳板的大小。
+6. y_bottom = y_top + x_delta，相当于让顶点y坐标根据跳板大小进行预先偏移，目的是跳过小白点且避免跳板本身纹路的影响。然后从y_bottom开始逐渐增加y坐标，查看(y, x_top)附近是否有像素，有则视为找到了底部顶点。则要跳到的目标点即为(y_top + y_bottom) / 2.
